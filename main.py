@@ -1,40 +1,43 @@
 import os
-import pytube
 import whisper
-import ffmpeg
 from dotenv import load_dotenv
+from video_downloader import download_youtube_video_and_audio
+import database
 
+load_dotenv()
 
-api_key = os.getenv("YOUTUBE_API_KEY")
-
-if not api_key:
-    raise ValueError("Missing YOUTUBE_API_KEY environment variable")
-
-def download_youtube_video_as_audio(youtube_url, output_path="audio.mp3"):
-    yt = pytube.YouTube(youtube_url)
-    stream = yt.streams.filter(only_audio=True).first()
-    stream.download(filename="video.mp4")
-    
-    # Convert video to audio using ffmpeg
-    os.system(f"ffmpeg -i video.mp4 -q:a 0 -map a {output_path}")
-    print(f"Audio saved as {output_path}")
-    return output_path
+# Setup the database
+database.setup_db()
 
 def transcribe_audio_with_whisper(audio_file):
-    model = whisper.load_model("small")  # Use "base" model, you can also try "small", "medium", "large"
+    model = whisper.load_model("small")
     result = model.transcribe(audio_file)
     return result['text']
 
-if __name__ == "__main__":
-    # Step 1: Download the YouTube video as audio
-    youtube_url = "https://youtube.com/shorts/xMQTMK5AO_A?si=LysnH_0J883qEzh6" #Long devision 
-    audio_file = download_youtube_video_as_audio(youtube_url)
+def process_videos(video_urls):
+    for url in video_urls:
+        print(f"Processing {url}...")
+        
+        # Download video and audio
+        video_file, audio_file = download_youtube_video_and_audio(url)
 
-    # Step 2: Transcribe the audio
-    transcript = transcribe_audio_with_whisper(audio_file)
+        if video_file and audio_file:
+            # Transcribe the audio
+            transcript = transcribe_audio_with_whisper(audio_file)
+
+            # Save the transcript
+            transcript_file = f"{audio_file.split('.')[0]}_transcript.txt"
+            with open(transcript_file, "w") as f:
+                f.write(transcript)
+            
+            print(f"Transcription saved to {transcript_file}")
+        else:
+            print(f"Failed to process {url}")
+
+if __name__ == "__main__":
+    video_urls = [
+        "https://www.youtube.com/shorts/xMQTMK5AO_A",
+        "https://www.youtube.com/shorts/9gUpMSnffFU"
+    ]
     
-    # Step 3: Save the transcript to a file
-    with open("transcript.txt", "w") as f:
-        f.write(transcript)
-    
-    print("Transcription complete. Transcript saved to 'transcript.txt'")
+    process_videos(video_urls)
