@@ -1,10 +1,10 @@
 import sqlite3
 
-DATABASE_NAME = "foresthacks.db"
+foresthacks = "foresthacks.db"
 
 def connect_db():
     """Connect to the SQLite database."""
-    return sqlite3.connect(DATABASE_NAME)
+    return sqlite3.connect(foresthacks)
 
 def setup_db():
     """Set up the database with the required tables."""
